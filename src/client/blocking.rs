@@ -25,8 +25,8 @@ pub fn client<C: Into<ClientOptions>>(options: C) -> Client {
         .build()
         .unwrap(); // Unwrap here is as safe as `HttpClient::new`
 
-    // Create bounded channel (10x flush_at for backpressure)
-    let (sender, receiver) = mpsc::sync_channel(options.flush_at * 10);
+    // Create bounded channel for event queueing
+    let (sender, receiver) = mpsc::sync_channel(options.max_queue_size);
 
     // Spawn background worker thread
     let worker_handle = thread::spawn(move || {
@@ -100,11 +100,24 @@ fn send_batch(
 
 impl Client {
     /// Capture the provided event, queuing it for batch sending.
-    /// This method does not block - events are sent asynchronously by a background thread.
+    ///
+    /// This method returns immediately after queueing the event - it does **not**
+    /// wait for the event to be sent to PostHog. The actual HTTP request happens
+    /// asynchronously in a background thread.
     ///
     /// Events are automatically batched and sent when either:
     /// - The batch reaches `flush_at` events (default: 100)
     /// - `flush_interval` milliseconds have elapsed (default: 500ms)
+    ///
+    /// # Error Handling
+    ///
+    /// This method only returns errors for queueing failures (e.g., client already
+    /// shut down). Network errors and HTTP failures that occur during the actual
+    /// send operation are logged via the `log` crate but are not returned to the
+    /// caller. Initialize a logger (e.g., `env_logger::init()`) to see these warnings.
+    ///
+    /// If you need guaranteed delivery confirmation, consider implementing a
+    /// separate verification mechanism.
     pub fn capture(&self, event: Event) -> Result<(), Error> {
         self.sender
             .as_ref()

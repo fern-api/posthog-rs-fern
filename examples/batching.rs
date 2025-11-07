@@ -38,9 +38,8 @@ async fn run_async() {
     dotenv().ok();
 
     // Get API key from environment
-    let api_key = env::var("POSTHOG_API_KEY").expect(
-        "POSTHOG_API_KEY must be set. Example: export POSTHOG_API_KEY=\"phc_...\"",
-    );
+    let api_key = env::var("POSTHOG_API_KEY")
+        .expect("POSTHOG_API_KEY must be set. Example: export POSTHOG_API_KEY=\"phc_...\"");
 
     println!("=== Example 1: Default Batching Configuration ===");
     println!("Using default settings: flush_at=100, flush_interval_ms=500\n");
@@ -52,9 +51,7 @@ async fn run_async() {
         for i in 0..5 {
             let distinct_id = format!("user_{}", i);
             let mut event = Event::new("example_event", &distinct_id);
-            event
-                .insert_prop("example_type", "default_config")
-                .unwrap();
+            event.insert_prop("example_type", "default_config").unwrap();
             event.insert_prop("event_number", i).unwrap();
 
             client.capture(event).await.unwrap();
@@ -83,9 +80,7 @@ async fn run_async() {
     for i in 0..5 {
         let distinct_id = format!("user_custom_{}", i);
         let mut event = Event::new("example_event_custom", &distinct_id);
-        event
-            .insert_prop("example_type", "custom_config")
-            .unwrap();
+        event.insert_prop("example_type", "custom_config").unwrap();
         event.insert_prop("event_number", i).unwrap();
 
         client2.capture(event).await.unwrap();
@@ -117,9 +112,8 @@ fn run_blocking() {
     dotenv().ok();
 
     // Get API key from environment
-    let api_key = env::var("POSTHOG_API_KEY").expect(
-        "POSTHOG_API_KEY must be set. Example: export POSTHOG_API_KEY=\"phc_...\"",
-    );
+    let api_key = env::var("POSTHOG_API_KEY")
+        .expect("POSTHOG_API_KEY must be set. Example: export POSTHOG_API_KEY=\"phc_...\"");
 
     println!("=== Example 1: Default Batching Configuration ===");
     println!("Using default settings: flush_at=100, flush_interval_ms=500\n");
@@ -131,9 +125,7 @@ fn run_blocking() {
         for i in 0..5 {
             let distinct_id = format!("user_{}", i);
             let mut event = Event::new("example_event", &distinct_id);
-            event
-                .insert_prop("example_type", "default_config")
-                .unwrap();
+            event.insert_prop("example_type", "default_config").unwrap();
             event.insert_prop("event_number", i).unwrap();
 
             client.capture(event).unwrap();
@@ -162,9 +154,7 @@ fn run_blocking() {
     for i in 0..5 {
         let distinct_id = format!("user_custom_{}", i);
         let mut event = Event::new("example_event_custom", &distinct_id);
-        event
-            .insert_prop("example_type", "custom_config")
-            .unwrap();
+        event.insert_prop("example_type", "custom_config").unwrap();
         event.insert_prop("event_number", i).unwrap();
 
         client2.capture(event).unwrap();

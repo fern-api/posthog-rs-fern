@@ -51,9 +51,7 @@ mod e2e_tests {
             for i in 0..10 {
                 let distinct_id = format!("e2e_user_{}", i);
                 let mut event = Event::new("e2e batching test", &distinct_id);
-                event
-                    .insert_prop("test_run", "default_config")
-                    .unwrap();
+                event.insert_prop("test_run", "default_config").unwrap();
                 event.insert_prop("event_number", i).unwrap();
 
                 client.capture(event).unwrap();
@@ -136,9 +134,7 @@ mod e2e_tests {
             for i in 0..10 {
                 let distinct_id = format!("e2e_user_async_{}", i);
                 let mut event = Event::new("e2e batching test async", &distinct_id);
-                event
-                    .insert_prop("test_run", "default_config")
-                    .unwrap();
+                event.insert_prop("test_run", "default_config").unwrap();
                 event.insert_prop("event_number", i).unwrap();
 
                 client.capture(event).await.unwrap();

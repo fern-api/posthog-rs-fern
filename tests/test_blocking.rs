@@ -259,10 +259,8 @@ mod blocking_batching_tests {
                 let _client = client(options);
 
                 // Client drops without capturing any events
+                // Drop blocks until worker thread finishes
             }
-
-            // Give worker time to shut down
-            thread::sleep(Duration::from_millis(100));
         });
 
         handle.join().unwrap();
@@ -317,5 +315,97 @@ mod blocking_batching_tests {
 
         // Verify both batches were attempted despite server errors
         mock.assert_hits(2);
+    }
+
+    #[test]
+    fn test_backpressure() {
+        // Test that capture blocks when queue is full (backpressure)
+        let server = MockServer::start();
+
+        let mock = server.mock(|when, then| {
+            when.method(POST).path("/batch/");
+            // Slow response to allow queue to fill up
+            then.status(200).body("").delay(Duration::from_millis(100));
+        });
+
+        let options = ClientOptionsBuilder::default()
+            .api_key("test_key".to_string())
+            .api_endpoint(format!("{}/batch/", server.base_url()))
+            .flush_at(5)
+            .max_queue_size(10) // Small queue to test backpressure
+            .flush_interval_ms(10000)
+            .build()
+            .unwrap();
+
+        let handle = thread::spawn(move || {
+            let client = client(options);
+
+            // Send 20 events quickly - this will fill the queue (10 capacity)
+            // and trigger backpressure
+            for i in 0..20 {
+                let distinct_id = format!("user_{}", i);
+                let event = Event::new("test_event", &distinct_id);
+                // This should block when queue is full, then continue when space is available
+                client.capture(event).unwrap();
+            }
+
+            // Drop client to flush remaining events
+            drop(client);
+        });
+
+        handle.join().unwrap();
+
+        // Client dropped in thread, worker thread joined before thread exits
+        // Verify all 20 events were sent (4 batches of 5)
+        mock.assert_hits(4);
+    }
+
+    #[test]
+    fn test_concurrent_captures() {
+        // Test that multiple concurrent threads can safely capture events
+        use std::sync::Arc;
+
+        let server = MockServer::start();
+
+        let mock = server.mock(|when, then| {
+            when.method(POST).path("/batch/");
+            then.status(200).body("");
+        });
+
+        let options = ClientOptionsBuilder::default()
+            .api_key("test_key".to_string())
+            .api_endpoint(format!("{}/batch/", server.base_url()))
+            .flush_at(10)
+            .flush_interval_ms(10000)
+            .build()
+            .unwrap();
+
+        let client = Arc::new(client(options));
+
+        // Spawn 10 concurrent threads, each sending 10 events (100 total)
+        let mut handles = vec![];
+        for task_id in 0..10 {
+            let client = Arc::clone(&client);
+            let handle = thread::spawn(move || {
+                for i in 0..10 {
+                    let distinct_id = format!("thread_{}_event_{}", task_id, i);
+                    let event = Event::new("concurrent_test", &distinct_id);
+                    client.capture(event).unwrap();
+                }
+            });
+            handles.push(handle);
+        }
+
+        // Wait for all threads to complete
+        for handle in handles {
+            handle.join().unwrap();
+        }
+
+        // Drop client to flush remaining events
+        // Drop blocks until worker thread finishes (via handle.join())
+        drop(client);
+
+        // Verify all 100 events were sent (10 batches of 10)
+        mock.assert_hits(10);
     }
 }
