@@ -23,6 +23,16 @@ pub struct ClientOptions {
 
     #[builder(default = "30")]
     request_timeout_seconds: u64,
+
+    /// Maximum number of events to batch before flushing (default: 100).
+    /// Events are sent automatically when this threshold is reached.
+    #[builder(default = "100")]
+    flush_at: usize,
+
+    /// Maximum time to wait before flushing events in milliseconds (default: 500).
+    /// Events are sent automatically after this interval even if `flush_at` isn't reached.
+    #[builder(default = "500")]
+    flush_interval_ms: u64,
 }
 
 impl From<&str> for ClientOptions {
