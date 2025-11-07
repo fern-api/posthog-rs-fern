@@ -23,6 +23,22 @@ pub struct ClientOptions {
 
     #[builder(default = "30")]
     request_timeout_seconds: u64,
+
+    /// Maximum number of events to batch before flushing (default: 100).
+    /// Events are sent automatically when this threshold is reached.
+    #[builder(default = "100")]
+    flush_at: usize,
+
+    /// Maximum time to wait before flushing events in milliseconds (default: 500).
+    /// Events are sent automatically after this interval even if `flush_at` isn't reached.
+    #[builder(default = "500")]
+    flush_interval_ms: u64,
+
+    /// Maximum queue capacity for buffering events (default: 10,000).
+    /// This determines how many events can be queued while batches are being sent.
+    /// Higher values provide more headroom for bursty traffic but use more memory.
+    #[builder(default = "10000")]
+    max_queue_size: usize,
 }
 
 impl From<&str> for ClientOptions {
